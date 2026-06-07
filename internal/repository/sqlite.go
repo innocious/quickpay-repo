@@ -58,3 +58,7 @@ func (r *SQLiteRepo) CreateUser(u domain.User) error {
 	}
 	return nil
 }
+
+func (r *SQLiteRepo) DB() *sql.DB {
+	return r.db
+}
