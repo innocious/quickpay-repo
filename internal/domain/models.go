@@ -32,6 +32,19 @@ func ValidateEmail(email string) error {
 	if len(splitEmail[0]) == 0 || len(splitEmail[1]) == 0 {
 		return errors.New("ERR_INVALID_EMAIL")
 	}
+
+	return nil
+}
+
+type Transaction struct {
+	UserID string
+	Amount int64 // Amount in cents to prevent floating point errors
+}
+
+func ValidateDeposit(tx Transaction) error {
+	if tx.Amount < 500 || tx.Amount > 500000 {
+		return errors.New("ERR_DEPOSIT_LIMIT")
+	}
 	
 	return nil
 }
