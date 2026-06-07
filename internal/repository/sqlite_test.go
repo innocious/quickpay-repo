@@ -3,6 +3,7 @@ package repository
 import (
 	"testing"
 	"database/sql"
+	"quickpay/internal/domain"
 )
 
 func TestDatabaseLiveness(t *testing.T) {
@@ -49,5 +50,34 @@ func TestDatabaseMigration(t *testing.T) {
 	}
 }
 
+func TestCreateUser(t *testing.T) {
+	// ARRANGE
+	repo, _ := NewSQLiteRepository("file:test_create_user_db?mode=memory")
+	defer repo.Close()
 
-	
+	_ = repo.Migrate()
+
+	newUser := domain.User{
+		ID: "user_999",
+		LegalName: "Maxwell Smart",
+		Email: "maxwell@example.com",
+		Age: 28,
+	}
+
+	// ACT
+	err := repo.CreateUser(newUser)
+	if err != nil {
+		t.Fatalf("Failed to create user: %v", err)
+	}
+
+	// ASSERT
+	var savedName string
+	err = repo.db.QueryRow("SELECT legal_name FROM users WHERE id = ?", newUser.ID).Scan(&savedName)
+
+	if err != nil {
+		t.Fatalf("Failed to retrieve user: %v", err)
+	}
+	if savedName != "Maxwell Smart" {
+		t.Errorf("Expected 'Maxwell Smart', got '%s'", savedName)
+	}
+}

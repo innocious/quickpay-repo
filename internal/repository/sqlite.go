@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	_ "modernc.org/sqlite"
+	"quickpay/internal/domain"
 )
 
 type SQLiteRepo struct{
@@ -43,6 +44,15 @@ func (r *SQLiteRepo) Migrate() error {
 		balance_cents INTEGER NOT NULL DEFAULT 0
 	);`
 	_, err := r.db.Exec(query)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *SQLiteRepo) CreateUser(u domain.User) error {
+	query := `INSERT INTO users (id, legal_name, email, age) VALUES (?, ?, ?, ?);`
+	_, err := r.db.Exec(query, u.ID, u.LegalName, u.Email, u.Age)
 	if err != nil {
 		return err
 	}
