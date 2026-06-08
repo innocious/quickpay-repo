@@ -8,7 +8,7 @@ import (
 
 func TestDatabaseLiveness(t *testing.T) {
 	// ARRANGE: Initialize our repository pointing to a temporary test database
-	repo, err := NewSQLiteRepository("file:test_liveness_db?mode=memory")
+	repo, err := NewSQLiteRepository("file:test_liveness.db?mode=memory")
 	if err != nil {
 		t.Fatalf("Failed to initialize database: %v", err)
 	}
@@ -25,7 +25,7 @@ func TestDatabaseLiveness(t *testing.T) {
 
 func TestDatabaseMigration(t *testing.T) {
 	// ARRANGE
-	repo, err := NewSQLiteRepository("file:test_migration_db?mode=memory")
+	repo, err := NewSQLiteRepository("file:test_migration.db?mode=memory")
 	if err != nil {
 		t.Fatalf("Failed to initialize database: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestDatabaseMigration(t *testing.T) {
 
 func TestCreateUser(t *testing.T) {
 	// ARRANGE
-	repo, _ := NewSQLiteRepository("file:test_create_user_db?mode=memory")
+	repo, _ := NewSQLiteRepository("file:test_create_user.db?mode=memory")
 	defer repo.Close()
 
 	_ = repo.Migrate()

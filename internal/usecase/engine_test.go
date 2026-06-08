@@ -7,7 +7,7 @@ import (
 )
 
 func setupTestDB(t *testing.T) *repository.SQLiteRepo {
-	repo, err := repository.NewSQLiteRepository("file:memory?cache=shared")
+	repo, err := repository.NewSQLiteRepository("file::memory?cache=shared")
 	if err != nil {
 		t.Fatalf("Failed to init db: %v", err)
 	}
