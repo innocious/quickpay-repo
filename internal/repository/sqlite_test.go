@@ -1,9 +1,9 @@
 package repository
 
 import (
-	"testing"
 	"database/sql"
 	"quickpay/internal/domain"
+	"testing"
 )
 
 func TestDatabaseLiveness(t *testing.T) {
@@ -29,7 +29,7 @@ func TestDatabaseMigration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialize database: %v", err)
 	}
-	
+
 	defer repo.Close()
 
 	// ACT
@@ -42,7 +42,7 @@ func TestDatabaseMigration(t *testing.T) {
 	var tableName string
 	query := `SELECT name FROM sqlite_master WHERE type='table' AND name='users';`
 	err = repo.db.QueryRow(query).Scan(&tableName)
-	
+
 	if err == sql.ErrNoRows {
 		t.Errorf("Expected 'users' table to exist, but it was not found.")
 	} else if err != nil {
@@ -58,10 +58,10 @@ func TestCreateUser(t *testing.T) {
 	_ = repo.Migrate()
 
 	newUser := domain.User{
-		ID: "user_999",
+		ID:        "user_999",
 		LegalName: "Maxwell Smart",
-		Email: "maxwell@example.com",
-		Age: 28,
+		Email:     "maxwell@example.com",
+		Age:       28,
 	}
 
 	// ACT

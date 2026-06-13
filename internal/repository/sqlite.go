@@ -2,11 +2,13 @@ package repository
 
 import (
 	"database/sql"
+	"strings"
+
 	_ "modernc.org/sqlite"
 	"quickpay/internal/domain"
 )
 
-type SQLiteRepo struct{
+type SQLiteRepo struct {
 	db *sql.DB
 }
 
@@ -51,11 +53,18 @@ func (r *SQLiteRepo) Migrate() error {
 }
 
 func (r *SQLiteRepo) CreateUser(u domain.User) error {
-	query := `INSERT INTO users (id, legal_name, email, age) VALUES (?, ?, ?, ?);`
-	_, err := r.db.Exec(query, u.ID, u.LegalName, u.Email, u.Age)
+	query := `INSERT INTO users (id, legal_name, email, age, balance_cents) VALUES (?, ?, ?, ?, ?)`
+
+	_, err := r.db.Exec(query, u.ID, u.LegalName, u.Email, u.Age, 0)
 	if err != nil {
+		// Intercept the specific SQLite unique constraint error
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return domain.ErrDuplicateUser
+		}
+		// If it's a different database error, return it as is
 		return err
 	}
+
 	return nil
 }
 

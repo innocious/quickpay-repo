@@ -2,15 +2,18 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 
 	"quickpay/internal/domain"
 	"quickpay/internal/repository"
 	"quickpay/internal/usecase"
-
 )
 
+// This is the entry point of the QuickPay API server.
+// It initializes the database connection, performs migrations, sets up HTTP routes for user creation and money transfers, and starts the server on port 8080.
+// The server handles JSON payloads for both endpoints and returns appropriate HTTP status codes based on the success or failure of the operations.
 func main() {
 	log.Println("INIT: Starting main function...")
 
@@ -46,8 +49,19 @@ func main() {
 			return
 		}
 
+		// Save to the SQLite DB
 		if err := repo.CreateUser(u); err != nil {
-			http.Error(w, "Failed to create user", http.StatusInternalServerError)
+			// Log the actual error to your internal terminal, but don't send it to the user
+			log.Printf("CreateUser failed: %v", err)
+
+			// Map the domain error to an HTTP response
+			if errors.Is(err, domain.ErrDuplicateUser) {
+				http.Error(w, `{"status": "error", "message": "Account already exists"}`, http.StatusConflict)
+				return
+			}
+
+			// Catch-all for true internal database crashes
+			http.Error(w, `{"status": "error", "message": "Internal Server Error"}`, http.StatusInternalServerError)
 			return
 		}
 
@@ -58,9 +72,9 @@ func main() {
 
 	mux.HandleFunc("POST /api/transfer", func(w http.ResponseWriter, r *http.Request) {
 		var payload struct {
-			SenderID     string `json:"sender_id"`
-			ReceiverID   string `json:"receiver_id"`
-			Amount int64  `json:"amount"`
+			SenderID   string `json:"sender_id"`
+			ReceiverID string `json:"receiver_id"`
+			Amount     int64  `json:"amount"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -81,6 +95,28 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status": "success", "message": "Transfer completed successfully"}`))
+	})
+
+	mux.HandleFunc("POST /api/deposit", func(w http.ResponseWriter, r *http.Request) {
+		var payload struct {
+			UserID string `json:"user_id"`
+			Amount int64  `json:"amount"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+			return
+		}
+
+		if err := engine.ExecuteDeposit(payload.UserID, payload.Amount); err != nil {
+			log.Printf("Deposit failed: %v", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status": "success", "message": "Funds deposited successfully"}`))
 	})
 
 	log.Println("Server booting... QuickPay API live on http://localhost:8080")

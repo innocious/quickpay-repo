@@ -1,19 +1,17 @@
 package usecase
 
 import (
-	"testing"
 	"quickpay/internal/domain"
 	"quickpay/internal/repository"
+	"testing"
 )
 
 func setupTestDB(t *testing.T) *repository.SQLiteRepo {
-	repo, err := repository.NewSQLiteRepository("file::memory?cache=shared")
+	repo, err := repository.NewSQLiteRepository(":memory:")
 	if err != nil {
 		t.Fatalf("Failed to init db: %v", err)
 	}
-
 	_ = repo.Migrate()
-
 	return repo
 }
 
@@ -29,7 +27,7 @@ func TestExecuteTransfer_HappyPath(t *testing.T) {
 	_ = repo.CreateUser(domain.User{ID: "user_B", LegalName: "Bob", Email: "bob@test.com", Age: 30})
 
 	engine := NewEngine(repo)
-	
+
 	// ACT
 	err := engine.ExecuteTransfer("user_A", "user_B", 10000) // Transfer $100
 
@@ -79,5 +77,52 @@ func TestExecuteTransfer_InsufficientFunds(t *testing.T) {
 	_ = repo.DB().QueryRow(`SELECT balance_cents FROM users WHERE id = 'user_C'`).Scan(&balanceC)
 	if balanceC != 10000 {
 		t.Errorf("Expected User C balance to remain 10000 cents, got %d", balanceC)
+	}
+}
+
+func TestExecuteDeposit_HappyPath(t *testing.T) {
+	// ARRANGE: Setup the strictly ephemeral memory database
+	repo := setupTestDB(t)
+	defer repo.Close()
+
+	// Create our user starting with 0 balance
+	_ = repo.CreateUser(domain.User{ID: "user_deposit_1", LegalName: "Alice", Email: "alice@test.com", Age: 25})
+
+	engine := NewEngine(repo)
+
+	// ACT: Deposit $500.00 (50000 cents)
+	err := engine.ExecuteDeposit("user_deposit_1", 50000)
+
+	// ASSERT: The transaction should succeed
+	if err != nil {
+		t.Fatalf("Expected deposit to succeed, got error: %v", err)
+	}
+
+	// Verify the ledger actually reflects the 50000 cents
+	var finalBalance int64
+	_ = repo.DB().QueryRow("SELECT balance_cents FROM users WHERE id = 'user_deposit_1'").Scan(&finalBalance)
+
+	if finalBalance != 50000 {
+		t.Errorf("Expected balance to be 50000, got %d", finalBalance)
+	}
+}
+
+func TestExecuteDeposit_UserNotFound(t *testing.T) {
+	// ARRANGE: Setup the strictly ephemeral memory database
+	repo := setupTestDB(t)
+	defer repo.Close()
+
+	engine := NewEngine(repo)
+
+	// ACT: Attempt to deposit into a non-existent account
+	err := engine.ExecuteDeposit("ghost_user_999", 10000)
+
+	// ASSERT: The engine must catch that the row wasn't updated
+	if err == nil {
+		t.Fatalf("Expected deposit to fail for non-existent user, but it succeeded")
+	}
+
+	if err.Error() != "user not found" {
+		t.Errorf("Expected 'user not found' error, got: %v", err)
 	}
 }

@@ -6,11 +6,13 @@ import (
 )
 
 type User struct {
-	ID 			string
-	LegalName 	string
-	Email 		string
-	Age 		int
+	ID        string
+	LegalName string
+	Email     string
+	Age       int
 }
+
+var ErrDuplicateUser = errors.New("user with this ID or email already exists")
 
 func ValidateUser(u User) error {
 	if u.Age < 18 {
@@ -45,6 +47,6 @@ func ValidateDeposit(tx Transaction) error {
 	if tx.Amount < 500 || tx.Amount > 500000 {
 		return errors.New("ERR_DEPOSIT_LIMIT")
 	}
-	
+
 	return nil
 }

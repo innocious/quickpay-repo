@@ -41,10 +41,27 @@ func (e *Engine) ExecuteTransfer(senderID, receiverID string, transferAmount int
 		return err
 	}
 
+	// Add to receiver
 	_, err = tx.Exec("UPDATE users SET balance_cents = balance_cents + ? WHERE id = ?", transferAmount, receiverID)
 	if err != nil {
 		return err
 	}
-	
+
 	return tx.Commit()
+}
+
+// ExecuteDeposit adds funds to a user's account after validating limits
+func (e *Engine) ExecuteDeposit(userID string, amount int64) error {
+	query := `UPDATE users SET balance_cents = balance_cents + ? WHERE id = ?`
+	result, err := e.repo.DB().Exec(query, amount, userID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return errors.New("user not found")
+	}
+
+	return nil
 }
